@@ -3,7 +3,7 @@
 
 # @Author: Liu Junyang
 # @Student_ID: 21722094
-# @Time: 2023/12/02
+# @Time: 2023/12/03
 
 import socket
 import os
@@ -94,16 +94,16 @@ def sendOnePing(icmpSocket, destinationAddress, ID):
 
 def doOnePing(destinationAddress, timeout):
     # 1. Create ICMP socket
-    icmpSocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
+    icmp_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
     my_id = os.getpid() & 0xFFFF
     # 2. Call sendOnePing function
-    sendOnePing(icmpSocket, destinationAddress, my_id)
+    sendOnePing(icmp_socket, destinationAddress, my_id)
 
     # 3. Call receiveOnePing function
-    time_delay, rec_type, rec_code = receiveOnePing(icmpSocket, destinationAddress, my_id, timeout)
+    time_delay, rec_type, rec_code = receiveOnePing(icmp_socket, destinationAddress, my_id, timeout)
 
     # 4. Close ICMP socket
-    icmpSocket.close()
+    icmp_socket.close()
 
     # 5. Return total network delay
     return time_delay, rec_type, rec_code
