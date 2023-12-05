@@ -94,27 +94,26 @@ def receiveUdpPing(udp_socket, timeout):
 
 
 def receiveOnePing(icmpSocket, destinationAddress, ID, timeout):
-    while True:
-        start_time = time.time()
-        select_object = select.select([icmpSocket], [], [], timeout)
-        run_time = time.time() - start_time
+    start_time = time.time()
+    select_object = select.select([icmpSocket], [], [], timeout)
+    run_time = time.time() - start_time
 
-        if run_time > timeout or run_time == 0:
-            return -1, -1, -1, '-1'
+    if run_time > timeout or run_time == 0:
+        return -1, -1, -1, '-1'
 
-        rec_packet, rec_address = icmpSocket.recvfrom(1024)
-        rec_header = rec_packet[20:28]
-        rec_type, rec_code, rec_checksum, rec_id, rec_sequence = struct.unpack(ICMP_FORMAT, rec_header)
-        address = rec_address[0]
+    rec_packet, rec_address = icmpSocket.recvfrom(1024)
+    rec_header = rec_packet[20:28]
+    rec_type, rec_code, rec_checksum, rec_id, rec_sequence = struct.unpack(ICMP_FORMAT, rec_header)
+    address = rec_address[0]
 
-        try:
-            host_info = socket.gethostbyaddr(address)
-        except socket.error as e:
-            host_name = '{0}'.format(address)
-        else:
-            host_name = '{0} ({1})'.format(address, host_info[0])
+    try:
+        host_info = socket.gethostbyaddr(address)
+    except socket.error as e:
+        host_name = '{0}'.format(address)
+    else:
+        host_name = '{0} ({1})'.format(address, host_info[0])
 
-        return run_time, rec_type, rec_code, host_name
+    return run_time, rec_type, rec_code, host_name
 
 
 def sendOnePing(socket, destinationAddress, ID, protocol):
@@ -162,6 +161,7 @@ def doOnePing(destinationAddress, timeout, ttl, protocol):
     udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, struct.pack('I', ttl))
     udp_socket.settimeout(timeout)
+    udp_socket.listen(10)
     #udp_socket.bind(("", 8001))
 
     #
@@ -224,7 +224,7 @@ if __name__ == '__main__':
         try:
             host = input("Please input domain name to ping:")
             timeout = int(input("Please enter timeout:"))
-            protocol = input("Please choose protocol to test (icmp/udp/tcp):")
+            protocol = input("Please choose protocol to test (icmp/udp):")
             traceroute(host, timeout, protocol)
             break
         except Exception as e:
