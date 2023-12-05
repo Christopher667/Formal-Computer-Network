@@ -158,10 +158,10 @@ def doOnePing(destinationAddress, timeout, ttl, protocol):
     #
     # Build udp_socket
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    udp_socket.bind(('', 0))
     udp_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, struct.pack('I', ttl))
     udp_socket.settimeout(timeout)
-    udp_socket.listen(10)
     #udp_socket.bind(("", 8001))
 
     #

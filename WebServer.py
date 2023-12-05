@@ -16,28 +16,28 @@ def handleRequest(tcpSocket):
 	print("Connection has been established")
 	print("Client address: ", client_address)
 	# 2. Extract the path of the requested object from the message (second part of the HTTP header)
-	request_data = tcpSocket.recv(1024)
+	request_data = connect_socket.recv(1024)
 	request_list = request_data.decode().split('\r\n')
 	request_headerline = request_list[0]
 	print("Request line: " + request_headerline)
-	file_name = request_headerline.split(' ')[1].replace('/', ' ')
-	print("File name: ", file_name)
+	file_name = request_headerline.split(' ')[1].replace('/', '')
+	print("File name: "+file_name)
 
 	try:
-		file = open('./' + file_name, 'rb')
+		file = open('F:/PyCharm/ComputerNetworkFormal/' + file_name, 'rb')
 	except FileNotFoundError:
 		response_content = "404 NOT FOUND\n"
 		response_header = "HTTP/1.1 404 Not Found\r\n" + \
 						  "Server: 127.0.0.1\r\n" + "\r\n"
 		response_message = (response_header + response_content).encode(encoding='UTF-8')
-		tcpSocket.sendall(response_message)
+		connect_socket.sendall(response_message)
 	else:
 		response_content = file.read().decode()
 		response_header = "HTTP/1.1 200 OK\r\n" + \
 						  "Server: 127.0.0.1\r\n" + "\r\n"
 		response_message = (response_header + response_content).encode(encoding='UTF-8')
-		tcpSocket.sendall(response_message)
-	tcpSocket.close()
+		connect_socket.sendall(response_message)
+	connect_socket.close()
 
 def startServer(serverAddress, serverPort):
 	# 1. Create server socket
