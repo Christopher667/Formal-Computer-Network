@@ -172,9 +172,10 @@ def doOnePing(destinationAddress, timeout, ttl, protocol):
     elif protocol == 'udp':
         sendOnePing(udp_socket, destinationAddress, my_id, protocol)
         time.sleep(0.1)
-    udp_socket.close()
+
     time_delay, rec_type, rec_code, host_name = receiveOnePing(icmp_socket, destinationAddress, my_id, timeout)
     icmp_socket.close()
+    udp_socket.close()
     return time_delay, rec_type, rec_code, host_name
 
 def traceroute(host, timeout, protocol):
