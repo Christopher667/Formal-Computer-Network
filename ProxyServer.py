@@ -7,11 +7,10 @@
 
 import socket
 import os.path
-import sys
 
 def responseToServer(client_socket, receive_data, file_name, file_path):
     print("File is not found in proxy server!")
-    print("Request is sent to server.")
+    print("[Web Server] Request is sent to Web Server.\n")
     try:
         server_name = file_name.split(':')[0]
         proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -39,7 +38,33 @@ def responseToHost(client_socket, file_path):
     print("File is found in proxy server.")
     response = file.read()
     client_socket.sendall(response)
-    print("Request has been sent!")
+    print("[Proxy Server] Request is sent to Proxy Server!\n")
+
+def deleteHandle(receive_data):
+    file_name = receive_data.split()[1].split('//')[1].replace('/', '')
+    file_path = './' + file_name.split(':')[0].replace('.', '_')
+    print("File name: ", file_name)
+    print("File path: ", file_path)
+    if os.path.exists(file_path):
+        os.remove('./' + file_path + '/index.html')
+        os.rmdir(file_path)
+    else:
+        print("No such file in server!")
+
+def headHandle(client_socket, receive_data):
+    file_name = receive_data.split()[1].replace('/', '')
+    file_path = file_name.split(':')[0].replace('.', '_')
+    print("File name: ", file_name)
+    print("File path: ", file_path)
+    if os.path.exists(file_path):
+        header = "HTTP/ 1.1 200 OK\r\n\r\n"
+        client_socket.send(header.encode())
+        print("HEAD request successfully finished!\n")
+    else:
+        header = "HTTP/ 1.1 404 NOT FOUND\r\n\r\n"
+        client_socket.send(header.encode())
+        print("No such file in server!")
+
 
 def getHandle(client_socket, receive_data):
     file_name = receive_data.split()[1].split('//')[1].replace('/', '')
@@ -58,6 +83,10 @@ def handleRequest(tcpSocket):
     print("Http request type:", request_type)
     if request_type == 'GET':
         getHandle(tcpSocket, receive_data)
+    elif request_type == 'HEAD':
+        headHandle(tcpSocket, receive_data)
+    elif request_type == 'DELETE':
+        deleteHandle(receive_data)
 
 
 

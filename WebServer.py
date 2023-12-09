@@ -6,7 +6,7 @@
 # @Time: 2023/12/05
 
 import socket
-import sys
+
 
 
 def requestFormat(data):
