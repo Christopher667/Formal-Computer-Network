@@ -8,7 +8,15 @@
 import socket
 import os.path
 
-def responseToServer(client_socket, receive_data, file_name, file_path):
+INDEX = '/index.html'
+
+
+def print_info(file_name, file_path):
+    print("File name: ", file_name)
+    print("File path: ", file_path)
+
+
+def response_to_server(client_socket, receive_data, file_name, file_path):
     print("File is not found in proxy server!")
     print("[Web Server] Request is sent to Web Server.\n")
     try:
@@ -25,37 +33,37 @@ def responseToServer(client_socket, receive_data, file_name, file_path):
             os.makedirs(file_path)
             print("Folder has been created.")
 
-        file_cache = open(file_path + '/index.html', 'w')
+        file_cache = open(file_path + INDEX, 'w')
         file_cache.write(server_response.decode('UTF-8').replace('\r\n', '\n'))
         file_cache.close()
         print("File cache finished!")
-    except:
+    except Exception:
         print("File cache time out!")
 
 
-def responseToHost(client_socket, file_path):
-    file = open(file_path + '/index.html', 'rb')  # file = index.html, open file to read binary data.
+def response_to_host(client_socket, file_path):
+    file = open(file_path + INDEX, 'rb')  # file = index.html, open file to read binary data.
     print("File is found in proxy server.")
     response = file.read()
     client_socket.sendall(response)
     print("[Proxy Server] Request is sent to Proxy Server!\n")
 
-def deleteHandle(receive_data):
+
+def delete_handle(receive_data):
     file_name = receive_data.split()[1].split('//')[1].replace('/', '')
     file_path = './' + file_name.split(':')[0].replace('.', '_')
-    print("File name: ", file_name)
-    print("File path: ", file_path)
+    print_info(file_name, file_path)
     if os.path.exists(file_path):
-        os.remove('./' + file_path + '/index.html')
+        os.remove('./' + file_path + INDEX)
         os.rmdir(file_path)
     else:
         print("No such file in server!")
 
-def headHandle(client_socket, receive_data):
+
+def head_handle(client_socket, receive_data):
     file_name = receive_data.split()[1].replace('/', '')
     file_path = file_name.split(':')[0].replace('.', '_')
-    print("File name: ", file_name)
-    print("File path: ", file_path)
+    print_info(file_name, file_path)
     if os.path.exists(file_path):
         header = "HTTP/ 1.1 200 OK\r\n\r\n"
         client_socket.send(header.encode())
@@ -66,31 +74,29 @@ def headHandle(client_socket, receive_data):
         print("No such file in server!")
 
 
-def getHandle(client_socket, receive_data):
+def get_handle(client_socket, receive_data):
     file_name = receive_data.split()[1].split('//')[1].replace('/', '')
     file_path = './' + file_name.split(':')[0].replace('.', '_')
-    print("File name: ", file_name)
-    print("File path: ", file_path)
+    print_info(file_name, file_path)
     try:
-        responseToHost(client_socket, file_path)
-    except:
-        responseToServer(client_socket, receive_data, file_name, file_path)
+        response_to_host(client_socket, file_path)
+    except Exception:
+        response_to_server(client_socket, receive_data, file_name, file_path)
 
 
-def handleRequest(tcpSocket):
-    receive_data = tcpSocket.recv(4096).decode('UTF-8')
+def handle_request(tcp_socket):
+    receive_data = tcp_socket.recv(4096).decode('UTF-8')
     request_type = receive_data.split(" ")[0]
     print("Http request type:", request_type)
     if request_type == 'GET':
-        getHandle(tcpSocket, receive_data)
+        get_handle(tcp_socket, receive_data)
     elif request_type == 'HEAD':
-        headHandle(tcpSocket, receive_data)
+        head_handle(tcp_socket, receive_data)
     elif request_type == 'DELETE':
-        deleteHandle(receive_data)
+        delete_handle(receive_data)
 
 
-
-def startProxyServer(address, port):
+def start_proxy_server(address, port):
     proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     proxy_socket.bind((address, port))
     proxy_socket.listen(10)
@@ -101,9 +107,9 @@ def startProxyServer(address, port):
             client_socket, client_address = proxy_socket.accept()
             print("Connection has been established")
             print("Client address: ", client_address)
-            handleRequest(client_socket)
+            handle_request(client_socket)
             client_socket.close()
-        except Exception as e:
+        except Exception:
             print("Connection Error!")
             break
 
@@ -112,4 +118,4 @@ def startProxyServer(address, port):
 
 if __name__ == '__main__':
     port_number = int(input("Please enter the proxy server prot number: "))
-    startProxyServer('127.0.0.1', port_number)
+    start_proxy_server('127.0.0.1', port_number)

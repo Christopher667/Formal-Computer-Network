@@ -18,6 +18,7 @@ SEQUENCE = 0
 ICMP_FORMAT = '!bbHHh'
 DATA_FORMAT = '!d'
 
+
 def checksum(string):
     csum = 0
     countTo = (len(string) // 2) * 2
@@ -54,9 +55,9 @@ def receiveOnePing(icmpSocket, destinationAddress, ID, timeout):
         if select_object[0] == [] or remaining_time <= 0:
             return -1, -1, -1
 
-        rec_packet, address = icmpSocket.recvfrom(1024)
+        rec_packet, _ = icmpSocket.recvfrom(1024)
         rec_header = rec_packet[20:28]
-        rec_type, rec_code, rec_checksum, rec_id, rec_sequence = struct.unpack(ICMP_FORMAT, rec_header)
+        rec_type, rec_code, _, rec_id, _ = struct.unpack(ICMP_FORMAT, rec_header)
 
         if rec_id == ID:
             sent_time = struct.unpack(DATA_FORMAT, rec_packet[28:28 + struct.calcsize(DATA_FORMAT)])[0]
@@ -109,6 +110,19 @@ def doOnePing(destinationAddress, timeout):
     return time_delay, rec_type, rec_code
 
 
+def is_timeout(time_delay, rec_type, rec_code):
+    return time_delay == -1 and rec_type == -1 and rec_code == -1
+
+
+def is_unreachable(rec_code, i, dest_ip):
+    if rec_code == 0:
+        print("Measurement: %d, ping ip: %s, network unreachable" % (i, dest_ip))
+    elif rec_code == 1:
+        print("Measurement: %d, ping ip: %s, host unreachable" % (i, dest_ip))
+    elif rec_code == 3:
+        print("Measurement: %d, ping ip: %s, port unreachable" % (i, dest_ip))
+
+
 def ping(host, number, timeout):
     lost, receive = 0, 0
     max_time, min_time, sum_time = 0, 1000, 0
@@ -122,27 +136,19 @@ def ping(host, number, timeout):
     for i in range(0, number):
         time_delay, rec_type, rec_code = doOnePing(dest_ip, timeout)
         i += 1
-        SEQUENCE = i
 
-        if (time_delay == -1 and rec_type == -1 and rec_code == -1):
+        if is_timeout(time_delay, rec_type, rec_code):
             print("Measurement: %d, ping ip: %s, request timeout" % (i, dest_ip))
             lost += 1
-        else:
-            if rec_type == 0 and rec_code == 0:
-                print("Measurement: %d, ping ip: %s, delay: %5.0f ms" % (i, dest_ip, time_delay))
-                receive += 1
-                max_time = max(max_time, time_delay)
-                min_time = min(min_time, time_delay)
-                sum_time += time_delay
-            elif rec_type == 3 and rec_code == 0:
-                print("Measurement: %d, ping ip: %s, network unreachable" % (i, dest_ip))
-                lost += 1
-            elif rec_type == 3 and rec_code == 1:
-                print("Measurement: %d, ping ip: %s, host unreachable" % (i, dest_ip))
-                lost += 1
-            elif rec_type == 3 and rec_code == 3:
-                print("Measurement: %d, ping ip: %s, port unreachable" % (i, dest_ip))
-                lost += 1
+        elif rec_type == 3:
+            lost += 1
+            is_unreachable(rec_code, i, dest_ip)
+        elif rec_type == 0 and rec_code == 0:
+            print("Measurement: %d, ping ip: %s, delay: %5.0f ms" % (i, dest_ip, time_delay))
+            receive += 1
+            max_time = max(max_time, time_delay)
+            min_time = min(min_time, time_delay)
+            sum_time += time_delay
 
         time.sleep(0.5)
 
@@ -152,9 +158,7 @@ def ping(host, number, timeout):
         print(f"\nTotal Send: {send}, Success: {receive}, Lost: {lost}, Success Rate: {recv_rate:.2f}%.")
         print(f"Max Time = {int(max_time)}ms, Minimum Time = {int(min_time)}ms, Average Time = {int(avg_time)}ms")
     else:
-        print(f"\nTotal Send: {send}, Success: {receive}, lost: {lost}, All Lost!")
-
-
+        print(f"\nTotal send: {send}, Success: {receive}, lost: {lost}, All Lost!")
 
 
 if __name__ == '__main__':
@@ -168,4 +172,3 @@ if __name__ == '__main__':
         except Exception as e:
             print(e)
             continue
-

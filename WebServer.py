@@ -8,8 +8,7 @@
 import socket
 
 
-
-def requestFormat(data):
+def request_format(data):
     request_list = data.decode().split('\r\n')
     request_headerline = request_list[0]
     file_name = request_headerline.split(' ')[1].replace('/', '')
@@ -24,7 +23,7 @@ def handleRequest(tcpSocket):
     print("Client address: ", client_address)
     # 2. Extract the path of the requested object from the message (second part of the HTTP header)
     request_data = connect_socket.recv(1024)
-    request_headerline, file_name = requestFormat(request_data)
+    request_headerline, file_name = request_format(request_data)
     print("Request line: " + request_headerline)
     print("File name: " + file_name)
 
@@ -60,7 +59,7 @@ def startServer(serverAddress, serverPort):
     while True:
         try:
             handleRequest(tcp_socket)
-        except Exception as e:
+        except Exception:
             print("Error!")
             break
     #  5. Close server socket
