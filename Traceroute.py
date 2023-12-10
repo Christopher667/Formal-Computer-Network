@@ -13,22 +13,10 @@ import select
 import sys
 
 ICMP_ECHO_REQUEST = 8
-CODE_ECHO_REQUEST_DEFAULT = 0
-# ICMP echo_reply
-ICMP_ECHO_REPLY = 0
-CODE_ECHO_REPLY_DEFAULT = 0
-# ICMP overtime
-TYPE_ICMP_OVERTIME = 11
-CODE_TTL_OVERTIME = 0
-# ICMP unreachable
-TYPE_ICMP_UNREACHED = 3
-
 MAX_HOPS = 30  # set max hops-30
-TRIES = 3  # detect 3 times
-
 SEQUENCE = 1
-ICMP_FORMAT = 'bbHHh'
-DATA_FORMAT = 'd'
+ICMP_FORMAT = 'bbHHh'  # ICMP header format string, used to pack and unpack ICMP headers
+DATA_FORMAT = 'd'  # Data format string, used to pack and unpack timestamp data
 
 
 def checksum(string):
@@ -56,14 +44,17 @@ def checksum(string):
     return answer
 
 
+# Function to determine whether timeout occurs
 def is_timeout(delay, rec_type, rec_code):
     return delay == -1 and rec_type == -1 and rec_code == -1
 
 
+# Function to determine whether it is unreachable
 def is_unreachable(rec_type, rec_code):
     return rec_type == 3 and rec_code in (0, 1, 2)
 
 
+# Function to handle unreachable situations
 def handle_unreachable(rec_code):
     if rec_code == 0:
         print("Network Unreachable!")
@@ -73,23 +64,28 @@ def handle_unreachable(rec_code):
         print("Protocol Unreachable!")
 
 
+# Function to determine whether the port is unreachable
 def is_port_unreachable(rec_type, rec_code):
     return rec_type == 3 and rec_code == 3
 
 
+# Function to determine whether ping is successful
 def is_ping_success(rec_type, rec_code):
     return rec_type == 11 and rec_code == 0
 
 
+# Function to determine whether to reply to ping
 def is_ping_reply(rec_type, rec_code):
     return rec_type == 0 and rec_code == 0
 
 
+# Function to handle ping replies
 def handle_ping_reply(delay, ip_name):
     print("%3.0dms [ip: %s]" % (delay * 1000, ip_name), end='\t')
     print("Finish!")
 
 
+# Function to print results
 def print_result(send, host_name):
     if send != 0:
         print("Host: %s" % host_name, end='\t')
@@ -97,6 +93,7 @@ def print_result(send, host_name):
         print("Request timeout!", end='\t')
 
 
+# Function to receive a ping reply and return run_time, rec_type, rec_code, host_name
 def receiveOnePing(icmpSocket, destinationAddress, ID, timeout):
     start_time = time.time()
     select.select([icmpSocket], [], [], timeout)
@@ -121,24 +118,25 @@ def receiveOnePing(icmpSocket, destinationAddress, ID, timeout):
 
 
 def sendOnePing(socket, destinationAddress, ID, protocol):
-    # 1. Build ICMP header
+    # Build ICMP header
     msg_checksum = 0
     msg_header = struct.pack(ICMP_FORMAT, ICMP_ECHO_REQUEST, 0, msg_checksum, ID, SEQUENCE)
     msg_data = struct.pack(DATA_FORMAT, time.time())
 
-    # 2. Checksum ICMP packet using given function
+    # Checksum ICMP packet using given function
     msg_packet = msg_header + msg_data
     msg_checksum = checksum(msg_packet)
 
-    if sys.platform == 'darwin':  # Get the current system type, 'darwin' stands for MAC OS X system
+    # Get the current system type, 'darwin' stands for MAC OS X system
+    if sys.platform == 'darwin':
         # Convert 16-bit integers from host to network byte order
         msg_checksum = msg_checksum & 0xffff
 
-    # 3. Insert checksum into packet
+    # Insert checksum into packet
     header = struct.pack(ICMP_FORMAT, ICMP_ECHO_REQUEST, 0, msg_checksum, ID, SEQUENCE)
     packet = header + msg_data
 
-    # 4. Send packet using socket
+    # Send packet using socket, choose which protocol to use.
     try:
         if protocol == 'icmp':
             socket.sendto(packet, (destinationAddress, 80))
@@ -162,7 +160,7 @@ def doOnePing(destinationAddress, timeout, ttl, protocol):
     udp_socket.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, struct.pack('I', ttl))
     udp_socket.settimeout(timeout)
 
-    #
+    # Get current process ID
     my_id = os.getpid() & 0xFFFF
 
     if protocol == 'icmp':

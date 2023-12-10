@@ -15,8 +15,8 @@ import sys
 ICMP_ECHO_REQUEST = 8  # ICMP type code for echo request messages
 ICMP_ECHO_REPLY = 0  # ICMP type code for echo reply messages
 SEQUENCE = 0
-ICMP_FORMAT = '!bbHHh'
-DATA_FORMAT = '!d'
+ICMP_FORMAT = '!bbHHh'  # ICMP header format string, used to pack and unpack ICMP headers
+DATA_FORMAT = '!d'  # Data format string, used to pack and unpack timestamp data
 
 
 def checksum(string):
@@ -66,12 +66,12 @@ def receiveOnePing(icmpSocket, destinationAddress, ID, timeout):
 
 
 def sendOnePing(icmpSocket, destinationAddress, ID):
-    # 1. Build ICMP header
+    # Build ICMP header
     msg_checksum = 0
     msg_header = struct.pack(ICMP_FORMAT, ICMP_ECHO_REQUEST, 0, msg_checksum, ID, SEQUENCE)
     msg_data = struct.pack(DATA_FORMAT, time.time())
 
-    # 2. Checksum ICMP packet using given function
+    # Checksum ICMP packet using given function
     msg_packet = msg_header + msg_data
     msg_checksum = checksum(msg_packet)
 
@@ -82,11 +82,11 @@ def sendOnePing(icmpSocket, destinationAddress, ID):
         # Convert host byte order to network byte order
         msg_checksum = socket.htons(msg_checksum)
 
-    # 3. Insert checksum into packet
+    # Insert checksum into packet
     header = struct.pack(ICMP_FORMAT, ICMP_ECHO_REQUEST, 0, msg_checksum, ID, SEQUENCE)
     packet = header + msg_data
 
-    # 4. Send packet using socket
+    # Send packet using socket
     try:
         icmpSocket.sendto(packet, (destinationAddress, 80))
     except socket.gaierror:
@@ -94,26 +94,30 @@ def sendOnePing(icmpSocket, destinationAddress, ID):
 
 
 def doOnePing(destinationAddress, timeout):
-    # 1. Create ICMP socket
+    # Execute a ping function
+    # Create ICMP socket
     icmp_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
     my_id = os.getpid() & 0xFFFF
-    # 2. Call sendOnePing function
+
+    # Call the sendOnePing function to send a ping request
     sendOnePing(icmp_socket, destinationAddress, my_id)
 
-    # 3. Call receiveOnePing function
+    # Call the receiveOnePing function to receive the ping reply
     time_delay, rec_type, rec_code = receiveOnePing(icmp_socket, destinationAddress, my_id, timeout)
 
-    # 4. Close ICMP socket
+    # Close ICMP socket
     icmp_socket.close()
 
-    # 5. Return total network delay
+    # Return total network delay
     return time_delay, rec_type, rec_code
 
 
+# Function to determine whether timeout occurs
 def is_timeout(time_delay, rec_type, rec_code):
     return time_delay == -1 and rec_type == -1 and rec_code == -1
 
 
+# Function to determine whether it is unreachable
 def is_unreachable(rec_code, i, dest_ip):
     if rec_code == 0:
         print("Measurement: %d, ping ip: %s, network unreachable" % (i, dest_ip))
@@ -123,16 +127,17 @@ def is_unreachable(rec_code, i, dest_ip):
         print("Measurement: %d, ping ip: %s, port unreachable" % (i, dest_ip))
 
 
+# Function to execute ping
 def ping(host, number, timeout):
     lost, receive = 0, 0
     max_time, min_time, sum_time = 0, 1000, 0
     send = number
 
-    # 1. Look up hostname, resolving it to an IP address
+    # Look up hostname, resolving it to an IP address
     dest_ip = socket.gethostbyname(host)
     print("Ping " + host + " IP: " + dest_ip)
 
-    # 2. Call doOnePing function, approximately every second
+    # Call doOnePing function, approximately every second
     for i in range(0, number):
         time_delay, rec_type, rec_code = doOnePing(dest_ip, timeout)
         i += 1

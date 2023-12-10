@@ -42,6 +42,6 @@ def http_client(ip_address, port):
 if __name__ == "__main__":
 
     ip_address = '127.0.0.1'
+    print("Run WebServer before start MyClient.")
     port = int(input("Enter the port number: "))
-
     http_client(ip_address, port)
